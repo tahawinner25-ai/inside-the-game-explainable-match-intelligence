@@ -10,6 +10,8 @@ A mobile-first football intelligence dashboard that turns a seeded, entirely fic
 - Schema-validated API contracts and structured narrative output; local deterministic templates work without Azure credentials.
 - An evidence panel linking interpretations to event IDs, confidence, alternatives, and caveats.
 - Analyst and fan views, favourite-team/player selection, adjustable simulation speed, reset, and a live event feed.
+- Searchable event timeline with team/type/player filters, focused-player event counts, a single-player stats API, and downloadable synthetic CSV match reports.
+- GitHub Actions CI for type, test, lint, and production-build checks.
 
 ## Architecture
 
@@ -67,6 +69,7 @@ All API responses containing generated insights or traces use the matching Zod s
 | `POST` | `/api/simulation/pause` | Pause event generation |
 | `POST` | `/api/simulation/tick` | Generate one simulation event and update analysis |
 | `GET` | `/api/events` | Current synthetic event list |
+| `GET` | `/api/players/{playerId}` | Calculated synthetic event involvement counts for one fictional player |
 | `GET` | `/api/insights` | Up to three priority insights |
 | `POST` | `/api/insights/analyze` | Analyze an optional event-ID selection for a viewer |
 | `GET` | `/api/traces` | User-safe agent traces |
@@ -94,6 +97,7 @@ The agent stages and tool-free local orchestrator do not depend on Microsoft Age
 - `tests/schemas.test.ts` covers schema validation and invalid confidence/event inputs.
 - `tests/simulation.test.ts` covers seeded repeatability, generated event validation, 150+ event capability, and deterministic metrics.
 - `tests/agents.test.ts` covers local provider selection, workflow evidence, and the trace shape.
+- `tests/analytics.test.ts` covers player event statistics and synthetic CSV report generation.
 - `e2e/dashboard.spec.ts` starts the app, starts the simulation, and verifies an insight and agent trace appear.
 
 The Playwright config starts the development server automatically. The e2e smoke test requires a Playwright browser installation.
