@@ -151,7 +151,14 @@ export default function Dashboard() {
   }
 
   function downloadReport() {
-    const report = createMatchReport(state.events, match.homeTeam.name, match.awayTeam.name, match.homeScore, match.awayScore);
+    if (!state) return;
+    const report = createMatchReport(
+      state.events,
+      state.match.homeTeam.name,
+      state.match.awayTeam.name,
+      state.match.homeScore,
+      state.match.awayScore,
+    );
     const url = URL.createObjectURL(new Blob([report], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
