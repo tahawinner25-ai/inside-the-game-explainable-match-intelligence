@@ -403,7 +403,7 @@ function PlayerStats({ stats }: { stats: ReturnType<typeof calculatePlayerStats>
   return (
     <div className="player-stat-grid">
       {statItems.map(([label, value]) => <div className="player-stat" key={label}><span>{label}</span><strong>{value}</strong></div>)}
-      <p className="player-stat-note">Counts are calculated only from this player's logged synthetic events; they are not a performance rating.</p>
+      <p className="player-stat-note">Counts are calculated only from this player&apos;s logged synthetic events; they are not a performance rating.</p>
     </div>
   );
 }
