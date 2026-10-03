@@ -130,6 +130,13 @@ button:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visib
 .analyst-note p { margin: 0; color: #8192a6; font-size: 9px; line-height: 1.5; }.analyst-note strong { color: #adbdcc; }
 .timeline-panel { padding-bottom: 10px; }
 .timeline-panel .panel-heading { margin-bottom: 11px; }
+.event-filters { display: grid; gap: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid #24354a; border-radius: 6px; background: #0d1926; }
+.search-label, .filter-row label { display: grid; gap: 5px; color: #7f91a5; font: 8px "DM Mono", monospace; letter-spacing: .3px; }
+.search-label input, .filter-row select { min-width: 0; width: 100%; height: 30px; padding: 0 8px; border: 1px solid #2a3c50; border-radius: 4px; background: #111f2e; color: #dce7f1; font: 10px "DM Sans", sans-serif; }
+.search-label input::placeholder { color: #61748a; }
+.filter-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; }
+.check-filter { display: flex; align-items: center; gap: 7px; color: #9aabbb; font-size: 9px; cursor: pointer; }
+.check-filter input { accent-color: #35c4aa; }
 .timeline-list { display: grid; max-height: 470px; overflow-y: auto; scrollbar-color: #344961 transparent; scrollbar-width: thin; }
 .timeline-event { display: grid; grid-template-columns: 31px 21px minmax(0, 1fr) 9px; gap: 8px; align-items: center; width: 100%; padding: 9px 4px; text-align: left; color: inherit; border: 0; border-top: 1px solid #1d2b3a; background: transparent; cursor: pointer; }
 .timeline-event:hover, .timeline-event.selected-event { background: #142437; }
@@ -139,6 +146,9 @@ button:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visib
 .event-copy { min-width: 0; }.event-copy strong { display: block; overflow: hidden; color: #c8d4df; font-size: 9px; font-weight: 500; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
 .event-copy small { display: block; overflow: hidden; margin-top: 3px; color: #708197; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .event-arrow { color: #53667d; font-size: 15px; }
+.no-events { margin: 0; padding: 20px 8px; color: #8293a7; text-align: center; font-size: 10px; }
+.load-more { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid #2a3d52; border-radius: 5px; color: #8ccbb9; background: #12231f; font-size: 9px; cursor: pointer; }
+.load-more:hover { background: #18342d; }
 .trace-panel .panel-heading { margin-bottom: 11px; }.trace-lock { color: #69c4aa; font-size: 20px; }
 .trace-empty { display: grid; justify-items: center; padding: 22px 10px; color: #73869b; text-align: center; }.trace-empty span { color: #70b8d5; font-size: 24px; }.trace-empty p { max-width: 200px; font-size: 9px; line-height: 1.5; }
 .trace-steps { display: grid; gap: 0; }
@@ -159,6 +169,12 @@ button:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visib
 .detail-row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid #203043; font-size: 9px; }.detail-row span { color: #71849b; font: 8px "DM Mono", monospace; }.detail-row b { color: #b8c6d4; font-weight: 500; text-align: right; }
 .evidence-detail .trace-steps { margin-top: 14px; padding-top: 8px; border-top: 1px solid #25364a; }
 .favourite-panel h2 { margin: 9px 0; font: 700 18px Manrope; }.favourite-panel h2 span { color: #7990a8; font-size: 12px; }.favourite-panel p { color: #a0afbf; font-size: 11px; line-height: 1.6; }.favourite-panel small { color: #71849a; font-size: 9px; }
+.player-stats-panel { padding: 20px; }
+.player-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 13px; }
+.player-stat { min-width: 0; padding: 9px; border: 1px solid #26384b; border-radius: 5px; background: #111e2c; }
+.player-stat span { display: block; color: #7e91a6; font-size: 8px; line-height: 1.4; }
+.player-stat strong { display: block; margin-top: 6px; color: #dce8f2; font: 700 15px Manrope; }
+.player-stat-note { grid-column: 1 / -1; margin: 2px 0 0; color: #6e8197; font-size: 8px; line-height: 1.45; }
 .error-banner { margin: -2px 0 14px; padding: 10px 13px; border: 1px solid #784545; border-radius: 6px; color: #f0bcbc; background: #301d22; font-size: 11px; }
 .footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 13px 0 0; border-top: 1px solid #182638; color: #5c6d81; font: 8px "DM Mono", monospace; }.footer i { color: #38b69a; font-style: normal; }
 .loading-shell { min-height: 100vh; display: grid; align-content: center; justify-items: center; color: #8293a7; }.spinner { width: 23px; height: 23px; border: 2px solid #31445a; border-top-color: #55cbb0; border-radius: 50%; animation: spin .8s linear infinite; }@keyframes spin { to { transform: rotate(360deg); } }
@@ -181,7 +197,8 @@ button:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visib
   .control-buttons { width: 100%; }.preference-controls { gap: 8px; }.segmented { order: 0; }.select-control { flex: 1 1 45%; flex-wrap: wrap; }.select-control select { flex: 1; min-width: 0; }
   .button-primary, .button-secondary { min-width: 75px; }.speed-control { margin-left: auto; }
   .section-caption { font-size: 8px; gap: 8px; }.clock-state { font-size: 7px; }
-  .insight-panel, .analyst-panel, .timeline-panel, .trace-panel, .favourite-panel { padding: 15px; }.insight-list { grid-template-columns: 1fr; }
+  .insight-panel, .analyst-panel, .timeline-panel, .trace-panel, .favourite-panel, .player-stats-panel { padding: 15px; }.insight-list { grid-template-columns: 1fr; }
+  .player-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .insight-summary { min-height: 0; }.footer { flex-direction: column; gap: 6px; line-height: 1.5; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
