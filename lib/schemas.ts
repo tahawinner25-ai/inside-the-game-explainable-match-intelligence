@@ -140,6 +140,19 @@ export const MatchStateSchema = z.object({
 export type MatchState = z.infer<typeof MatchStateSchema>;
 
 export const EventsResponseSchema = z.object({ events: z.array(EventSchema) });
+export const PlayerMatchStatsResponseSchema = z.object({
+  stats: z.object({
+    player: PlayerSchema,
+    eventInvolvements: z.number().int().nonnegative(),
+    successfulActions: z.number().int().nonnegative(),
+    progressivePasses: z.number().int().nonnegative(),
+    pressureActions: z.number().int().nonnegative(),
+    recoveries: z.number().int().nonnegative(),
+    shots: z.number().int().nonnegative(),
+    goals: z.number().int().nonnegative(),
+    lastEventMinute: z.number().int().min(0).nullable(),
+  }),
+});
 export const InsightsResponseSchema = z.object({ insights: z.array(TacticalInsightSchema).max(3) });
 export const TracesResponseSchema = z.object({ traces: z.array(AgentTraceSchema) });
 export const AnalyzeResponseSchema = z.object({
