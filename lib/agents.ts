@@ -4,7 +4,6 @@ import {
   EventSchema,
   TacticalInsightSchema,
   type AgentTrace,
-  type MatchEvent,
   type MatchState,
   type TacticalInsight,
   type ViewerProfile,
