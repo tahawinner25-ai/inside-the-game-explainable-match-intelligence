@@ -10,8 +10,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { MatchState, TacticalInsight, ViewerProfile } from "@/lib/schemas";
+import type { EventType, MatchState, TacticalInsight, ViewerProfile } from "@/lib/schemas";
+import { EventTypeSchema } from "@/lib/schemas";
 import { teams } from "@/lib/simulation";
+import { calculatePlayerStats, createMatchReport } from "@/lib/analytics";
 
 const defaultViewer: ViewerProfile = {
   favouriteTeamId: "team_harbor",
@@ -36,6 +38,11 @@ export default function Dashboard() {
   const [speed, setSpeed] = useState<Speed>(1);
   const [viewer, setViewer] = useState<ViewerProfile>(defaultViewer);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [eventSearch, setEventSearch] = useState("");
+  const [eventTypeFilter, setEventTypeFilter] = useState<EventType | "all">("all");
+  const [eventTeamFilter, setEventTeamFilter] = useState("all");
+  const [favouriteOnly, setFavouriteOnly] = useState(false);
+  const [visibleEvents, setVisibleEvents] = useState(24);
   const [providerMode, setProviderMode] = useState("demo");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +83,24 @@ export default function Dashboard() {
     }
   }, []);
 
+  const analyzeNow = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/insights/analyze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ viewer }),
+      });
+      if (!response.ok) throw new Error(await readError(response));
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to analyze the current match.");
+    } finally {
+      setBusy(false);
+    }
+  }, [load, viewer]);
+
   useEffect(() => {
     if (!state?.running || busy) return;
     const timer = window.setInterval(() => {
@@ -89,6 +114,10 @@ export default function Dashboard() {
     [state?.players, viewer.favouriteTeamId],
   );
   const selectedEvent = state?.events.find((item) => item.id === selectedEventId);
+  const focusedPlayer = state?.players.find((player) => player.id === viewer.favouritePlayerId);
+  const focusedPlayerStats = focusedPlayer && state
+    ? calculatePlayerStats(focusedPlayer, state.events)
+    : null;
   const selectedTrace = selectedEvent
     ? state?.traces.find((trace) => trace.eventInputIds.includes(selectedEvent.id))
     : state?.traces[0];
@@ -103,10 +132,32 @@ export default function Dashboard() {
     }
     return [...byMinute.values()].sort((a, b) => a.minute - b.minute);
   }, [state]);
+  const filteredEvents = useMemo(() => {
+    if (!state) return [];
+    const query = eventSearch.trim().toLocaleLowerCase();
+    return [...state.events].reverse().filter((event) => {
+      const player = state.players.find((candidate) => candidate.id === event.playerId);
+      const matchesText = !query || `${event.id} ${event.description} ${player?.name ?? ""}`.toLocaleLowerCase().includes(query);
+      return matchesText
+        && (eventTypeFilter === "all" || event.type === eventTypeFilter)
+        && (eventTeamFilter === "all" || event.teamId === eventTeamFilter)
+        && (!favouriteOnly || event.playerId === viewer.favouritePlayerId);
+    });
+  }, [eventSearch, eventTeamFilter, eventTypeFilter, favouriteOnly, state, viewer.favouritePlayerId]);
 
   function updateFavouriteTeam(teamId: string) {
     const nextPlayer = state?.players.find((player) => player.teamId === teamId);
     setViewer({ favouriteTeamId: teamId, favouritePlayerId: nextPlayer?.id ?? "" });
+  }
+
+  function downloadReport() {
+    const report = createMatchReport(state.events, match.homeTeam.name, match.awayTeam.name, match.homeScore, match.awayScore);
+    const url = URL.createObjectURL(new Blob([report], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${match.id}-synthetic-report.csv`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   if (!state) {
@@ -138,6 +189,8 @@ export default function Dashboard() {
             ? <button className="button-primary" onClick={() => void request("/api/simulation/start", { viewer })} disabled={busy}>▶ <span>Start</span></button>
             : <button className="button-secondary" onClick={() => void request("/api/simulation/pause")} disabled={busy}>Ⅱ <span>Pause</span></button>}
           <button className="button-quiet" onClick={() => { setSelectedEventId(null); void request("/api/match/reset"); }} disabled={busy}>↺ <span>Reset</span></button>
+          <button className="button-quiet" onClick={downloadReport} disabled={busy} aria-label="Download synthetic match report as CSV">⇩ <span>Export CSV</span></button>
+          <button className="button-quiet" onClick={() => void analyzeNow()} disabled={busy}>✳ <span>Analyze now</span></button>
           <label className="speed-control">Speed
             <select value={speed} onChange={(event) => setSpeed(Number(event.target.value) as Speed)} aria-label="Simulation speed">
               <option value={1}>1×</option><option value={2}>2×</option><option value={5}>5×</option>
@@ -242,6 +295,13 @@ export default function Dashboard() {
               <h2>{selectedPlayer.name} <span>#{selectedPlayer.number}</span></h2>
               <p>{state.events.filter((item) => item.playerId === selectedPlayer.id).slice(-2).map((item) => item.description).join(" · ") || "No recorded synthetic events for this player yet."}</p>
               <small>Fictional player · {teamFor(selectedPlayer.teamId)}</small>
+              {focusedPlayerStats && <PlayerStats stats={focusedPlayerStats} />}
+            </section>
+          )}
+          {mode === "analyst" && focusedPlayerStats && (
+            <section className="panel player-stats-panel">
+              <div className="panel-heading"><div><div className="eyebrow">PLAYER INVOLVEMENT · SYNTHETIC EVENT COUNTS</div><h2>{focusedPlayerStats.player.name}</h2></div><span className="timeline-count">#{focusedPlayerStats.player.number} · {focusedPlayerStats.player.position}</span></div>
+              <PlayerStats stats={focusedPlayerStats} />
             </section>
           )}
         </section>
@@ -249,8 +309,28 @@ export default function Dashboard() {
         <aside className="column-side">
           <section className="panel timeline-panel">
             <div className="panel-heading"><div><div className="eyebrow">SYNTHETIC EVENT FEED</div><h2>Live timeline</h2></div><span className="timeline-count">{state.events.length} EVENTS</span></div>
+            <div className="event-filters">
+              <label className="search-label">Search events
+                <input value={eventSearch} onChange={(event) => { setEventSearch(event.target.value); setVisibleEvents(24); }} placeholder="Event, action or player…" />
+              </label>
+              <div className="filter-row">
+                <label>Event type
+                  <select value={eventTypeFilter} onChange={(event) => { setEventTypeFilter(event.target.value as EventType | "all"); setVisibleEvents(24); }}>
+                    <option value="all">All event types</option>
+                    {EventTypeSchema.options.map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}
+                  </select>
+                </label>
+                <label>Team
+                  <select value={eventTeamFilter} onChange={(event) => { setEventTeamFilter(event.target.value); setVisibleEvents(24); }}>
+                    <option value="all">All teams</option>
+                    {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+                  </select>
+                </label>
+              </div>
+              <label className="check-filter"><input type="checkbox" checked={favouriteOnly} onChange={(event) => { setFavouriteOnly(event.target.checked); setVisibleEvents(24); }} /> Player to watch only</label>
+            </div>
             <div className="timeline-list" aria-label="Match events">
-              {[...state.events].reverse().slice(0, 24).map((event) => {
+              {filteredEvents.slice(0, visibleEvents).map((event) => {
                 const eventPlayer = state.players.find((player) => player.id === event.playerId);
                 return (
                   <button className={`timeline-event ${selectedEventId === event.id ? "selected-event" : ""}`} key={event.id} onClick={() => setSelectedEventId(selectedEventId === event.id ? null : event.id)} aria-label={`Event ${event.id}, ${event.minute} minutes, ${event.description}`}>
@@ -259,7 +339,9 @@ export default function Dashboard() {
                   </button>
                 );
               })}
+              {filteredEvents.length === 0 && <p className="no-events">No events match these filters.</p>}
             </div>
+            {filteredEvents.length > visibleEvents && <button className="load-more" onClick={() => setVisibleEvents((count) => count + 24)}>Show 24 older events ({filteredEvents.length - visibleEvents} remaining)</button>}
           </section>
 
           <section className="panel trace-panel">
@@ -299,6 +381,23 @@ function InsightCard({ insight, mode, onSelect }: { insight: TacticalInsight; mo
       <div className="why-box"><strong>Why it matters</strong><p>{insight.whyItMatters}</p></div>
       <details className="caveat"><summary>Interpretation &amp; caveat</summary><p>{insight.caveat}</p>{insight.alternativeExplanation && <p>Alternative: {insight.alternativeExplanation}</p>}</details>
     </article>
+  );
+}
+
+function PlayerStats({ stats }: { stats: ReturnType<typeof calculatePlayerStats> }) {
+  const statItems = [
+    ["Involvements", stats.eventInvolvements],
+    ["Successful actions", stats.successfulActions],
+    ["Progressive passes", stats.progressivePasses],
+    ["Pressures / tackles / interceptions", stats.pressureActions],
+    ["Recoveries", stats.recoveries],
+    ["Shots / goals", `${stats.shots} / ${stats.goals}`],
+  ] as const;
+  return (
+    <div className="player-stat-grid">
+      {statItems.map(([label, value]) => <div className="player-stat" key={label}><span>{label}</span><strong>{value}</strong></div>)}
+      <p className="player-stat-note">Counts are calculated only from this player's logged synthetic events; they are not a performance rating.</p>
+    </div>
   );
 }
 
