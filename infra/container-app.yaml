@@ -1,0 +1,40 @@
+name: inside-the-game
+type: Microsoft.App/containerApps
+apiVersion: 2023-05-01
+properties:
+  managedEnvironmentId: REPLACE_WITH_CONTAINER_APPS_ENVIRONMENT_ID
+  configuration:
+    ingress:
+      external: true
+      targetPort: 3000
+      transport: http
+  template:
+    containers:
+      - name: inside-the-game
+        image: REPLACE_WITH_ACR_IMAGE
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        probes:
+          - type: Liveness
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          - type: Readiness
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+        env:
+          - name: FOUNDRY_ENDPOINT
+            value: ""
+          - name: FOUNDRY_DEPLOYMENT
+            value: ""
+          - name: FOUNDRY_API_VERSION
+            value: "2024-10-21"
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
